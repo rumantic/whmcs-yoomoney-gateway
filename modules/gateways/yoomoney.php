@@ -5,18 +5,6 @@
  * Payment Gateway modules allow you to integrate payment solutions with the
  * WHMCS platform.
  *
- * This sample file demonstrates how a payment gateway module for WHMCS should
- * be structured and all supported functionality it can contain.
- *
- * Within the module itself, all functions must be prefixed with the module
- * filename, followed by an underscore, and then the function name. For this
- * example file, the filename is "gatewaymodule" and therefore all functions
- * begin "gatewaymodule_".
- *
- * If your module or third party API does not support a given function, you
- * should not define that function within your module. Only the _config
- * function is required.
- *
  * For more information, please refer to the online documentation.
  *
  * @see https://developers.whmcs.com/payment-gateways/
@@ -29,6 +17,8 @@ if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
 require __DIR__ . '/yoomoney/vendor/autoload.php';
+use YooKassa\Client;
+
 /**
  * Define yoomoney module related meta data.
  *
@@ -86,25 +76,12 @@ function yoomoney_config()
             'Default' => '',
             'Description' => 'Enter your shopId here',
         ),
-        'scid' => array(
-            'FriendlyName' => 'scid',
-            'Type' => 'text',
-            'Size' => '25',
-            'Default' => '',
-            'Description' => 'Enter your scid here',
-        ),
-        'shopPassword' => array(
-            'FriendlyName' => 'shopPassword',
+        'secretKey' => array(
+            'FriendlyName' => 'secretKey',
             'Type' => 'text',
             'Size' => '255',
             'Default' => '',
-            'Description' => 'Enter your shopPassword here',
-        ),
-        // the yesno field type displays a single checkbox option
-        'testMode' => array(
-            'FriendlyName' => 'Test Mode',
-            'Type' => 'yesno',
-            'Description' => 'Tick to enable test mode',
+            'Description' => 'Enter your secretKey here',
         ),
         /*
         // the dropdown field type renders a select menu of options
@@ -153,12 +130,8 @@ function yoomoney_config()
 function yoomoney_link($params)
 {
     // Gateway Configuration Parameters
-    $accountId = $params['accountID'];
+    $shopId = $params['shopId'];
     $secretKey = $params['secretKey'];
-    $testMode = $params['testMode'];
-    $dropdownField = $params['dropdownField'];
-    $radioField = $params['radioField'];
-    $textareaField = $params['textareaField'];
 
     // Invoice Parameters
     $invoiceId = $params['invoiceid'];
@@ -187,35 +160,45 @@ function yoomoney_link($params)
     $moduleName = $params['paymentmethod'];
     $whmcsVersion = $params['whmcsVersion'];
 
-    $url = 'https://www.demopaymentgateway.com/do.payment';
+    try {
+        $client = new Client();
+        $client->setAuth($shopId, $secretKey);
 
-    $postfields = array();
-    $postfields['username'] = $username;
-    $postfields['invoice_id'] = $invoiceId;
-    $postfields['description'] = $description;
-    $postfields['amount'] = $amount;
-    $postfields['currency'] = $currencyCode;
-    $postfields['first_name'] = $firstname;
-    $postfields['last_name'] = $lastname;
-    $postfields['email'] = $email;
-    $postfields['address1'] = $address1;
-    $postfields['address2'] = $address2;
-    $postfields['city'] = $city;
-    $postfields['state'] = $state;
-    $postfields['postcode'] = $postcode;
-    $postfields['country'] = $country;
-    $postfields['phone'] = $phone;
-    $postfields['callback_url'] = $systemUrl . '/modules/gateways/callback/' . $moduleName . '.php';
-    $postfields['return_url'] = $returnUrl;
+        $payment = $client->createPayment(
+            array(
+                'amount' => array(
+                    'value' => $amount,
+                    'currency' => 'RUB',
+                ),
+                'confirmation' => array(
+                    'type' => 'redirect',
+                    'return_url' => $returnUrl,
+                ),
+                'capture' => true,
+                'description' => $description,
+                'metadata' => [
+                    'invoice_id' => $invoiceId,
+                    'hash' => md5($invoiceId . $amount . $secretKey)
+                ],
+            ),
+            uniqid('', true)
+        );
+        if ( $payment->getStatus() == 'pending' ) {
+            $payment_array = $payment->toArray();
 
-    $htmlOutput = '<form method="post" action="' . $url . '">';
-    foreach ($postfields as $k => $v) {
-        $htmlOutput .= '<input type="hidden" name="' . $k . '" value="' . urlencode($v) . '" />';
+            $htmlOutput = '<a href="'.$payment_array['confirmation']['confirmation_url'].'" class="btn btn-success">
+            оплатить <img width="100" src="'.$systemUrl.'/modules/gateways/yoomoney/img/yoomoney.svg"></a>';
+
+            return $htmlOutput;
+
+        }
+
+
+
+    } catch ( Exception $e ) {
+        return $e->getMessage();
     }
-    $htmlOutput .= '<input type="submit" value="' . $langPayNow . '" />';
-    $htmlOutput .= '</form>';
-
-    return $htmlOutput;
+    return 'Ошибка создания счета';
 }
 
 /**

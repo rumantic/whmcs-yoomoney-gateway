@@ -1,13 +1,6 @@
 <?php
 /**
- * WHMCS Sample Payment Callback File
- *
- * This sample file demonstrates how a payment gateway callback should be
- * handled within WHMCS.
- *
- * It demonstrates verifying that the payment gateway module is active,
- * validating an Invoice ID, checking for the existence of a Transaction ID,
- * Logging the Transaction for debugging and Adding Payment to an Invoice.
+ * WHMCS Yoomoney Payment Callback File
  *
  * For more information, please refer to the online documentation.
  *
@@ -16,7 +9,7 @@
  * @copyright Copyright (c) WHMCS Limited 2017
  * @license http://www.whmcs.com/license/ WHMCS Eula
  */
-
+$data = json_decode(file_get_contents("php://input"), true);
 // Require libraries needed for gateway module functions.
 require_once __DIR__ . '/../../../init.php';
 require_once __DIR__ . '/../../../includes/gatewayfunctions.php';
@@ -35,14 +28,12 @@ if (!$gatewayParams['type']) {
 
 // Retrieve data returned in payment gateway callback
 // Varies per payment gateway
-$success = $_POST["x_status"];
-$invoiceId = $_POST["x_invoice_id"];
-$transactionId = $_POST["x_trans_id"];
-$paymentAmount = $_POST["x_amount"];
-$paymentFee = $_POST["x_fee"];
-$hash = $_POST["x_hash"];
+$success = $data["object"]["status"];
+$invoiceId = $data["object"]["metadata"]["invoice_id"];
+$paymentAmount = $data["object"]["amount"]["value"];
+$hash = $data["object"]["metadata"]["hash"];
 
-$transactionStatus = $success ? 'Success' : 'Failure';
+$transactionStatus = $success == 'succeeded' ? 'Success' : 'Failure';
 
 /**
  * Validate callback authenticity.
@@ -52,7 +43,7 @@ $transactionStatus = $success ? 'Success' : 'Failure';
  * way of a shared secret which is used to build and compare a hash.
  */
 $secretKey = $gatewayParams['secretKey'];
-if ($hash != md5($invoiceId . $transactionId . $paymentAmount . $secretKey)) {
+if ($hash != md5($invoiceId . $paymentAmount . $secretKey)) {
     $transactionStatus = 'Hash Verification Failure';
     $success = false;
 }
@@ -73,18 +64,6 @@ if ($hash != md5($invoiceId . $transactionId . $paymentAmount . $secretKey)) {
 $invoiceId = checkCbInvoiceID($invoiceId, $gatewayParams['name']);
 
 /**
- * Check Callback Transaction ID.
- *
- * Performs a check for any existing transactions with the same given
- * transaction number.
- *
- * Performs a die upon encountering a duplicate.
- *
- * @param string $transactionId Unique Transaction ID
- */
-checkCbTransID($transactionId);
-
-/**
  * Log Transaction.
  *
  * Add an entry to the Gateway Log for debugging purposes.
@@ -96,9 +75,10 @@ checkCbTransID($transactionId);
  * @param string|array $debugData    Data to log
  * @param string $transactionStatus  Status
  */
-logTransaction($gatewayParams['name'], $_POST, $transactionStatus);
+logTransaction($gatewayParams['name'], $data, $transactionStatus);
 
-if ($success) {
+
+if ($success == 'succeeded') {
 
     /**
      * Add Invoice Payment.
