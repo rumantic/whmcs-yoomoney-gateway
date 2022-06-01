@@ -10,6 +10,7 @@
  * @license http://www.whmcs.com/license/ WHMCS Eula
  */
 $data = json_decode(file_get_contents("php://input"), true);
+
 // Require libraries needed for gateway module functions.
 require_once __DIR__ . '/../../../init.php';
 require_once __DIR__ . '/../../../includes/gatewayfunctions.php';
@@ -25,10 +26,13 @@ $gatewayParams = getGatewayVariables($gatewayModuleName);
 if (!$gatewayParams['type']) {
     die("Module Not Activated");
 }
+//logTransaction('test', $_POST, 'test');
+//logTransaction('test1', $data, 'test1');
 
 // Retrieve data returned in payment gateway callback
 // Varies per payment gateway
 $success = $data["object"]["status"];
+$transactionId = $data["object"]["id"];
 $invoiceId = $data["object"]["metadata"]["invoice_id"];
 $paymentAmount = $data["object"]["amount"]["value"];
 $hash = $data["object"]["metadata"]["hash"];
@@ -62,6 +66,8 @@ if ($hash != md5($invoiceId . $paymentAmount . $secretKey)) {
  * @param string $gatewayName Gateway Name
  */
 $invoiceId = checkCbInvoiceID($invoiceId, $gatewayParams['name']);
+
+checkCbTransID($transactionId);
 
 /**
  * Log Transaction.
