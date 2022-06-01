@@ -1,6 +1,6 @@
 <?php
 /**
- * WHMCS Sample Payment Gateway Module
+ * WHMCS ЮMoney Payment Gateway Module
  *
  * Payment Gateway modules allow you to integrate payment solutions with the
  * WHMCS platform.
@@ -28,9 +28,9 @@
 if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
-
+require __DIR__ . '/yoomoney/vendor/autoload.php';
 /**
- * Define module related meta data.
+ * Define yoomoney module related meta data.
  *
  * Values returned here are used to determine module related capabilities and
  * settings.
@@ -39,10 +39,10 @@ if (!defined("WHMCS")) {
  *
  * @return array
  */
-function gatewaymodule_MetaData()
+function yoomoney_MetaData()
 {
     return array(
-        'DisplayName' => 'Sample Payment Gateway Module',
+        'DisplayName' => 'ЮMoney',
         'APIVersion' => '1.1', // Use API Version 1.1
         'DisableLocalCreditCardInput' => true,
         'TokenisedStorage' => false,
@@ -50,7 +50,7 @@ function gatewaymodule_MetaData()
 }
 
 /**
- * Define gateway configuration options.
+ * Define yoomoney configuration options.
  *
  * The fields you define here determine the configuration options that are
  * presented to administrator users when activating and configuring your
@@ -69,30 +69,36 @@ function gatewaymodule_MetaData()
  *
  * @return array
  */
-function gatewaymodule_config()
+function yoomoney_config()
 {
     return array(
         // the friendly display name for a payment gateway should be
         // defined here for backwards compatibility
         'FriendlyName' => array(
             'Type' => 'System',
-            'Value' => 'Sample Third Party Payment Gateway Module',
+            'Value' => 'ЮMoney',
         ),
         // a text field type allows for single line text input
-        'accountID' => array(
-            'FriendlyName' => 'Account ID',
+        'shopId' => array(
+            'FriendlyName' => 'shopId',
             'Type' => 'text',
             'Size' => '25',
             'Default' => '',
-            'Description' => 'Enter your account ID here',
+            'Description' => 'Enter your shopId here',
         ),
-        // a password field type allows for masked text input
-        'secretKey' => array(
-            'FriendlyName' => 'Secret Key',
-            'Type' => 'password',
+        'scid' => array(
+            'FriendlyName' => 'scid',
+            'Type' => 'text',
             'Size' => '25',
             'Default' => '',
-            'Description' => 'Enter secret key here',
+            'Description' => 'Enter your scid here',
+        ),
+        'shopPassword' => array(
+            'FriendlyName' => 'shopPassword',
+            'Type' => 'text',
+            'Size' => '255',
+            'Default' => '',
+            'Description' => 'Enter your shopPassword here',
         ),
         // the yesno field type displays a single checkbox option
         'testMode' => array(
@@ -100,6 +106,7 @@ function gatewaymodule_config()
             'Type' => 'yesno',
             'Description' => 'Tick to enable test mode',
         ),
+        /*
         // the dropdown field type renders a select menu of options
         'dropdownField' => array(
             'FriendlyName' => 'Dropdown Field',
@@ -125,7 +132,7 @@ function gatewaymodule_config()
             'Rows' => '3',
             'Cols' => '60',
             'Description' => 'Freeform multi-line text input field',
-        ),
+        ),*/
     );
 }
 
@@ -143,7 +150,7 @@ function gatewaymodule_config()
  *
  * @return string
  */
-function gatewaymodule_link($params)
+function yoomoney_link($params)
 {
     // Gateway Configuration Parameters
     $accountId = $params['accountID'];
@@ -222,7 +229,7 @@ function gatewaymodule_link($params)
  *
  * @return array Transaction response status
  */
-function gatewaymodule_refund($params)
+function yoomoney_refund($params)
 {
     // Gateway Configuration Parameters
     $accountId = $params['accountID'];
@@ -284,7 +291,7 @@ function gatewaymodule_refund($params)
  *
  * @return array Transaction response status
  */
-function gatewaymodule_cancelSubscription($params)
+function yoomoney_cancelSubscription($params)
 {
     // Gateway Configuration Parameters
     $accountId = $params['accountID'];
